@@ -803,23 +803,18 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
                 printf("torchx\n");
                 if (fip->field_passcount)
                 {
-					printf("torchx5\n");
                     if (fip->field_writecount == TIFF_VARIABLE2)
                         tv->count = (uint32_t)va_arg(ap, uint32_t);
                     else
                         tv->count = (int)va_arg(ap, int);
                 }
                 else if (fip->field_writecount == TIFF_VARIABLE ||
-                         fip->field_writecount == TIFF_VARIABLE2) {
-					printf("torchx6\n");
-					tv->count = 1;
-                } else if (fip->field_writecount == TIFF_SPP) {
-					printf("torchx7\n");
+                         fip->field_writecount == TIFF_VARIABLE2)
+                    tv->count = 1;
+                else if (fip->field_writecount == TIFF_SPP)
                     tv->count = td->td_samplesperpixel;
-                } else {
-					printf("torchx8\n");
+                else
                     tv->count = fip->field_writecount;
-                }
 
                 if (tv->count == 0)
                 {
@@ -832,7 +827,6 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
                                   fip->field_passcount);
                     goto end;
                 }
-                printf("torchx1 %d %d\n", tv->count, tv_size);
 
                 tv->value = _TIFFCheckMalloc(tif, tv->count, tv_size,
                                              "custom tag binary object");
@@ -841,7 +835,81 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
                     status = 0;
                     goto end;
                 }
-                printf("torchx2\n");
+				printf("torchx3\n");
+
+                if (fip->field_tag == TIFFTAG_DOTRANGE &&
+                    strcmp(fip->field_name, "DotRange") == 0)
+                {
+                    /* TODO: This is an evil exception and should not have been
+                       handled this way ... likely best if we move it into
+                       the directory structure with an explicit field in
+                       libtiff 4.1 and assign it a FIELD_ value */
+                    uint16_t v2[2];
+                    v2[0] = (uint16_t)va_arg(ap, int);
+                    v2[1] = (uint16_t)va_arg(ap, int);
+                    _TIFFmemcpy(tv->value, &v2, 4);
+                }
+
+                else if (fip->field_passcount ||
+                         fip->field_writecount == TIFF_VARIABLE ||
+                         fip->field_writecount == TIFF_VARIABLE2 ||
+                         fip->field_writecount == TIFF_SPP || tv->count > 1)
+                {
+					printf("torchelse1\n");
+                    printf("torchelse1 %d\n", tv->info->field_type);
+                    /*--: Rational2Double: For Rationals tv_size is set above to
+                     * 4 or 8 according to fip->set_field_type! */
+                    _TIFFmemcpy(tv->value, va_arg(ap, void *),
+                                tv->count * tv_size);
+                    /* Test here for too big values for LONG8, SLONG8 in
+                     * ClassicTIFF and delete custom field from custom list */
+                    if (!(tif->tif_flags & TIFF_BIGTIFF))
+                    {
+                        if (tv->info->field_type == TIFF_LONG8)
+                        {
+                            uint64_t *pui64 = (uint64_t *)tv->value;
+                            for (int i = 0; i < tv->count; i++)
+                            {
+                                if (pui64[i] > 0xffffffffu)
+                                {
+                                    TIFFErrorExtR(
+                                        tif, module,
+                                        "%s: Bad LONG8 value %" PRIu64
+                                        " at %d. array position for \"%s\" tag "
+                                        "%d in ClassicTIFF. Tag won't be "
+                                        "written to file",
+                                        tif->tif_name, pui64[i], i,
+                                        fip->field_name, tag);
+                                    goto badvalueifd8long8;
+                                }
+                            }
+                        }
+                        else if (tv->info->field_type == TIFF_SLONG8)
+                        {
+                            int64_t *pi64 = (int64_t *)tv->value;
+                            for (int i = 0; i < tv->count; i++)
+                            {
+                                if (pi64[i] > 2147483647 ||
+                                    pi64[i] < (-2147483647 - 1))
+                                {
+                                    TIFFErrorExtR(
+                                        tif, module,
+                                        "%s: Bad SLONG8 value %" PRIi64
+                                        " at %d. array position for \"%s\" tag "
+                                        "%d in ClassicTIFF. Tag won't be "
+                                        "written to file",
+                                        tif->tif_name, pi64[i], i,
+                                        fip->field_name, tag);
+                                    goto badvalueifd8long8;
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    printf("torchelse2\n");
+                }
             }
         }
     }
