@@ -772,31 +772,7 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
 
             if (fip->field_type == TIFF_ASCII)
             {
-                uint32_t ma;
-                const char *mb;
-                if (fip->field_passcount)
-                {
-                    assert(fip->field_writecount == TIFF_VARIABLE2);
-                    ma = (uint32_t)va_arg(ap, uint32_t);
-                    mb = (const char *)va_arg(ap, const char *);
-                }
-                else
-                {
-                    mb = (const char *)va_arg(ap, const char *);
-                    size_t len = strlen(mb) + 1;
-                    if (len >= 0x80000000U)
-                    {
-                        status = 0;
-                        TIFFErrorExtR(tif, module,
-                                      "%s: Too long string value for \"%s\". "
-                                      "Maximum supported is 2147483647 bytes",
-                                      tif->tif_name, fip->field_name);
-                        goto end;
-                    }
-                    ma = (uint32_t)len;
-                }
-                tv->count = ma;
-                setByteArray(tif, &tv->value, mb, ma, 1);
+                printf("torchy\n");
             }
             else
             {
