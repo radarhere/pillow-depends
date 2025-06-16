@@ -219,15 +219,21 @@ bad:
 
 static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
 {
+    printf("torchset\n");
     static const char module[] = "_TIFFVSetField";
 
     TIFFDirectory *td = &tif->tif_dir;
+    printf("torchset1\n");
     int status = 1;
     uint32_t v32, v;
     double dblval;
     char *s;
     const TIFFField *fip = TIFFFindField(tif, tag, TIFF_ANY);
     uint32_t standard_tag = tag;
+    printf("torchset2\n");
+    if (fip == NULL) {
+        printf("fip\n");
+    }
     if (fip == NULL) /* cannot happen since OkToChangeTag() already checks it */
         return 0;
     /*
@@ -236,10 +242,14 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
      * one - important for reinterpreted handling of standard
      * tag values in custom directories (i.e. EXIF)
      */
+    printf("torchset3\n");
     if (fip->field_bit == FIELD_CUSTOM)
     {
+        printf("custom\n");
         standard_tag = 0;
     }
+    printf("torchset4\n");
+    printf("torchtag %d\n", standard_tag);
 
     switch (standard_tag)
     {
@@ -663,6 +673,7 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
             break;
         default:
         {
+            printf("torchdefault\n");
             TIFFTagValue *tv;
             int tv_size, iCustom;
 
@@ -789,6 +800,7 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
             }
             else
             {
+                printf("torchx\n");
                 if (fip->field_passcount)
                 {
                     if (fip->field_writecount == TIFF_VARIABLE2)
@@ -842,6 +854,7 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
                          fip->field_writecount == TIFF_VARIABLE2 ||
                          fip->field_writecount == TIFF_SPP || tv->count > 1)
                 {
+                    printf("torchelse1 %d\n", tv->info->field_type);
                     /*--: Rational2Double: For Rationals tv_size is set above to
                      * 4 or 8 according to fip->set_field_type! */
                     _TIFFmemcpy(tv->value, va_arg(ap, void *),
@@ -893,6 +906,7 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
                 }
                 else
                 {
+                    printf("torchelse %d\n", fip->field_type);
                     char *val = (char *)tv->value;
                     assert(tv->count == 1);
 
@@ -981,6 +995,7 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
                              * above to 4 or 8 according to fip->set_field_type!
                              */
                             {
+                                printf("torchrational\n");
                                 if (tv_size == 8)
                                 {
                                     double v2 = va_arg(ap, double);
