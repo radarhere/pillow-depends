@@ -772,11 +772,76 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
 
             if (fip->field_type == TIFF_ASCII)
             {
-                printf("torchy\n");
+                uint32_t ma;
+                const char *mb;
+                if (fip->field_passcount)
+                {
+                    assert(fip->field_writecount == TIFF_VARIABLE2);
+                    ma = (uint32_t)va_arg(ap, uint32_t);
+                    mb = (const char *)va_arg(ap, const char *);
+                }
+                else
+                {
+                    mb = (const char *)va_arg(ap, const char *);
+                    size_t len = strlen(mb) + 1;
+                    if (len >= 0x80000000U)
+                    {
+                        status = 0;
+                        TIFFErrorExtR(tif, module,
+                                      "%s: Too long string value for \"%s\". "
+                                      "Maximum supported is 2147483647 bytes",
+                                      tif->tif_name, fip->field_name);
+                        goto end;
+                    }
+                    ma = (uint32_t)len;
+                }
+                tv->count = ma;
+                setByteArray(tif, &tv->value, mb, ma, 1);
             }
             else
             {
                 printf("torchx\n");
+                if (fip->field_passcount)
+                {
+					printf("torchx5\n");
+                    if (fip->field_writecount == TIFF_VARIABLE2)
+                        tv->count = (uint32_t)va_arg(ap, uint32_t);
+                    else
+                        tv->count = (int)va_arg(ap, int);
+                }
+                else if (fip->field_writecount == TIFF_VARIABLE ||
+                         fip->field_writecount == TIFF_VARIABLE2) {
+					printf("torchx6\n");
+					tv->count = 1;
+                } else if (fip->field_writecount == TIFF_SPP) {
+					printf("torchx7\n");
+                    tv->count = td->td_samplesperpixel;
+                } else {
+					printf("torchx8\n");
+                    tv->count = fip->field_writecount;
+                }
+
+                if (tv->count == 0)
+                {
+                    status = 0;
+                    TIFFErrorExtR(tif, module,
+                                  "%s: Null count for \"%s\" (type "
+                                  "%d, writecount %d, passcount %d)",
+                                  tif->tif_name, fip->field_name,
+                                  fip->field_type, fip->field_writecount,
+                                  fip->field_passcount);
+                    goto end;
+                }
+                printf("torchx1 %d %d\n", tv->count, tv_size);
+
+                tv->value = _TIFFCheckMalloc(tif, tv->count, tv_size,
+                                             "custom tag binary object");
+                if (!tv->value)
+                {
+                    status = 0;
+                    goto end;
+                }
+                printf("torchx2\n");
             }
         }
     }
