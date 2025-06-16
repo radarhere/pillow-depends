@@ -996,28 +996,6 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
                              */
                             {
                                 printf("torchrational\n");
-                                if (tv_size == 8)
-                                {
-                                    double v2 = va_arg(ap, double);
-                                    _TIFFmemcpy(val, &v2, tv_size);
-                                }
-                                else
-                                {
-                                    /*-- default should be tv_size == 4 */
-                                    float v3 = (float)va_arg(ap, double);
-                                    _TIFFmemcpy(val, &v3, tv_size);
-                                    /*-- ToDo: After Testing, this should be
-                                     * removed and tv_size==4 should be set as
-                                     * default. */
-                                    if (tv_size != 4)
-                                    {
-                                        TIFFErrorExtR(
-                                            tif, module,
-                                            "Rational2Double: .set_field_type "
-                                            "in not 4 but %d",
-                                            tv_size);
-                                    }
-                                }
                             }
                             break;
                         case TIFF_FLOAT:
